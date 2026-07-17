@@ -3,18 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>HostelQ - Smart Hostel Room Booking with Virtual Queue</title>
-    <meta name="description" content="HostelQ is the first virtual queue-based hostel room booking platform, offering a Tatkal-style booking system with real-time room status, group booking, and instant confirmations.">
-    <!-- Google Fonts: Outfit & Inter -->
+
+    <meta name="description"
+        content="HostelQ is the first virtual queue-based hostel room booking platform, offering a Tatkal-style booking system with real-time room status, group booking, and instant confirmations.">
+
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Link Stylesheet -->
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- CSS -->
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
-    <!-- Premium Mesh Background Gradients -->
+
+    <!-- Background -->
     <div class="bg-mesh">
         <div class="mesh-orb orb-1"></div>
         <div class="mesh-orb orb-2"></div>
@@ -23,60 +32,110 @@
 
     <!-- Application Shell -->
     <div id="app-shell">
-        <!-- Main Navigation Bar -->
+
+        <!-- Navbar -->
         <nav id="main-nav" class="nav-glass">
-            <!-- App Logo & Title -->
+
             <div class="nav-brand" id="nav-brand-btn">
                 <div class="brand-icon">HQ</div>
-                <span class="brand-name">Hostel<span class="text-accent">Q</span></span>
-            </div>
-            
-            <!-- Navigation Links -->
-            <div class="nav-menu" id="nav-menu">
-                <a href="#/" class="nav-link active" data-route="landing">Home</a>
-                <a href="#/dashboard" class="nav-link hidden" id="student-dash-link" data-route="dashboard">My Dashboard</a>
-                <a href="#/admin" class="nav-link" id="admin-dash-link" data-route="admin">Admin Console</a>
-                <button class="btn-theme" id="theme-toggle-btn" aria-label="Toggle Dark Mode">
-                    <!-- Theme SVG Icon will be inserted by JS -->
-                </button>
-                <div class="auth-btn-container" id="auth-nav-container">
-                    <!-- Login / Logout dynamic button -->
-                </div>
+                <span class="brand-name">
+                    Hostel<span class="text-accent">Q</span>
+                </span>
             </div>
 
-            <!-- Mobile Menu Toggle Button -->
-            <button class="mobile-nav-toggle" id="mobile-toggle" aria-label="Toggle Navigation Menu">
+            <div class="nav-menu" id="nav-menu">
+
+                <a href="#/" class="nav-link active">
+                    Home
+                </a>
+
+                <a href="#/dashboard"
+                   class="nav-link hidden"
+                   id="student-dash-link">
+                    My Dashboard
+                </a>
+
+                <a href="#/admin"
+                   class="nav-link"
+                   id="admin-dash-link">
+                    Admin Console
+                </a>
+
+                <button
+                    class="btn-theme"
+                    id="theme-toggle-btn"
+                    aria-label="Toggle Theme">
+                </button>
+
+                <div
+                    class="auth-btn-container"
+                    id="auth-nav-container">
+                </div>
+
+            </div>
+
+            <!-- Mobile Menu -->
+            <button
+                class="mobile-nav-toggle"
+                id="mobile-toggle"
+                aria-label="Toggle Navigation">
+
                 <span class="bar"></span>
                 <span class="bar"></span>
                 <span class="bar"></span>
+
             </button>
+
         </nav>
 
-        <!-- Live Notifications Banner / Toast container -->
+        <!-- Toast Notifications -->
         <div id="toast-container" class="toast-container"></div>
 
-        <!-- Main Dynamic View Container -->
+        <!-- Main App -->
         <main id="app-root">
+
             <div class="loading-spinner-container">
                 <div class="loading-spinner"></div>
                 <p>Initializing HostelQ...</p>
             </div>
+
         </main>
 
-        <!-- Sticky Footer -->
+        <!-- Footer -->
         <footer id="app-footer">
+
             <div class="footer-content">
-                <p>&copy; 2026 HostelQ. All rights reserved. Designed for Premium Student Experiences.</p>
+
+                <p>
+                    &copy; 2026 HostelQ.
+                    All rights reserved.
+                    Designed for Premium Student Experiences.
+                </p>
+
                 <div class="footer-links">
+
                     <a href="#/terms">Terms of Service</a>
+
                     <a href="#/privacy">Privacy Policy</a>
+
                     <a href="#/support">Support Helpdesk</a>
+
                 </div>
+
             </div>
+
         </footer>
+
     </div>
 
-    <!-- Core Store & Application Routing -->
-    <script type="module" src="js/app.js"></script>
+    <!-- Supabase SDK & Config -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+
+    <!-- SheetJS for Excel Import -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <script src="js/app.js"></script>
+
 </body>
 </html>
