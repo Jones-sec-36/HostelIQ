@@ -1163,44 +1163,6 @@ class Store {
                                 }).eq('id', eb.id);
                             }
                         }
-
-                        if (this.state.bookingWindow.status === 'open') {
-                            const randomTrigger = Math.random();
-                            const triggerThreshold = 0.15 * speed; 
-                            
-                            if (randomTrigger < triggerThreshold) {
-                                const { data: availableBeds } = await this.db.from('beds')
-                                    .select('*, rooms(*)')
-                                    .eq('status', 'available');
-
-                                if (availableBeds && availableBeds.length > 0) {
-                                    const randomBed = availableBeds[Math.floor(Math.random() * availableBeds.length)];
-                                    const simulatedRegNo = `STU${100 + Math.floor(Math.random() * 500)}`;
-                                    const isLock = Math.random() < 0.4;
-
-                                    if (isLock) {
-                                        await this.db.from('beds').update({
-                                            status: 'reserved',
-                                            locked_by: null,
-                                            lock_expires: Date.now() + 30 * 1000
-                                        }).eq('id', randomBed.id);
-
-                                        await this.addNotification("Live Lock", `Someone temporarily reserved Room ${randomBed.id.split('-')[1]} - Bed ${randomBed.bed_no}.`, "info");
-                                    } else {
-                                        await this.db.from('beds').update({
-                                            status: 'booked',
-                                            booked_by_reg_no: simulatedRegNo,
-                                            booked_by_name: `Student ${simulatedRegNo}`
-                                        }).eq('id', randomBed.id);
-
-                                        const newCount = this.state.simulatedBookingCount + 1;
-                                        await this.db.from('system_settings').update({ value: String(newCount) }).eq('key', 'simulated_booking_count');
-
-                                        await this.addNotification("Live Booking", `Room ${randomBed.id.split('-')[1]} Bed ${randomBed.bed_no} is now FULLY BOOKED.`, "danger");
-                                    }
-                                }
-                            }
-                        }
                     }
 
                 } catch (err) {
@@ -1269,35 +1231,6 @@ class Store {
                         }
                     });
                 });
-
-                if (this.state.bookingWindow.status === 'open') {
-                    const randomTrigger = Math.random();
-                    const triggerThreshold = 0.15 * speed; 
-                    
-                    if (randomTrigger < triggerThreshold) {
-                        const availableRooms = this.state.rooms.filter(r => r.beds.some(b => b.status === 'available'));
-                        if (availableRooms.length > 0) {
-                            const randomRoom = availableRooms[Math.floor(Math.random() * availableRooms.length)];
-                            const availableBeds = randomRoom.beds.filter(b => b.status === 'available');
-                            const randomBed = availableBeds[Math.floor(Math.random() * availableBeds.length)];
-                            const simulatedRegNo = `STU${100 + Math.floor(Math.random() * 500)}`;
-                            const isLock = Math.random() < 0.4;
-
-                            if (isLock) {
-                                randomBed.status = 'reserved';
-                                randomBed.lockedBy = simulatedRegNo;
-                                randomBed.lockExpires = Date.now() + 30 * 1000;
-                                this.addNotification("Live Lock", `Someone temporarily reserved Room ${randomRoom.roomNo} (${randomRoom.block}) - Bed ${randomBed.bedNo}.`, "info");
-                            } else {
-                                randomBed.status = 'booked';
-                                randomBed.bookedBy = { regNo: simulatedRegNo, name: `Student ${simulatedRegNo}` };
-                                this.state.simulatedBookingCount++;
-                                this.addNotification("Live Booking", `Room ${randomRoom.roomNo} (${randomRoom.block}) Bed ${randomBed.bedNo} is now FULLY BOOKED.`, "danger");
-                            }
-                            stateChanged = true;
-                        }
-                    }
-                }
 
                 if (stateChanged) {
                     this.notify();
