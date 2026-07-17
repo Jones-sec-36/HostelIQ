@@ -2818,8 +2818,11 @@ function setupTheme() {
     });
 }
 
+let currentRenderedRoute = null;
+
 function setupRouting() {
     window.addEventListener('hashchange', () => {
+        currentRenderedRoute = null; // Reset to force re-render on manual navigation
         routeView(parseRoute());
     });
 }
@@ -2851,6 +2854,18 @@ function routeView(route) {
         window.location.hash = '#/';
         return;
     }
+
+    // Prevent re-rendering static/input forms if already showing to avoid resetting input fields & losing focus
+    const isStaticRoute = (
+        route === '/' || 
+        route === '/login' || 
+        route === '/confirmation' || 
+        (route === '/admin' && (!currentUser || !currentUser.isAdmin))
+    );
+    if (isStaticRoute && currentRenderedRoute === route) {
+        return;
+    }
+    currentRenderedRoute = route;
 
     document.querySelectorAll('.nav-link').forEach(link => {
         const routeAttr = link.getAttribute('data-route');
