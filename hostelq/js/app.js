@@ -102,6 +102,20 @@ function generateInitialRooms() {
 class Store {
     constructor() {
         this.listeners = [];
+        
+        // Robust fallback initialization of Supabase client in case of loading race conditions
+        if (!window.supabaseClient && window.supabase) {
+            try {
+                window.supabaseClient = window.supabase.createClient(
+                    "https://dezldhinizayqzfrfsby.supabase.co",
+                    "sb_publishable_lHxwO27ZOLoFcAjXkZyfNg_rqC83qGF"
+                );
+                console.log("Initialized Supabase Client directly in Store constructor.");
+            } catch (e) {
+                console.error("Failed to initialize Supabase Client inside Store:", e);
+            }
+        }
+
         this.db = window.supabaseClient;
         this.isDbMode = !!this.db;
         this.loadState();
