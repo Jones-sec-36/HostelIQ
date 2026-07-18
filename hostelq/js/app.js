@@ -1405,16 +1405,21 @@ const StudentLogin = {
         const regInput = document.getElementById('reg-no');
         const passInput = document.getElementById('password');
 
-        form.addEventListener('submit', (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
             errDiv.style.display = 'none';
+            const submitBtn = form.querySelector('button[type=submit]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Signing In...';
+            }
             const regNo = regInput.value.trim();
             const password = passInput.value;
 
-            const res = store.loginStudent(regNo, password);
+            const res = await store.loginStudent(regNo, password);
             if (res.success) {
                 const userObj = store.getCurrentUserObject();
-                if (userObj.bookedRoom) {
+                if (userObj && userObj.bookedRoom) {
                     window.location.hash = '#/dashboard';
                 } else if (store.state.bookingWindow.status === 'open') {
                     window.location.hash = '#/queue';
@@ -1422,8 +1427,12 @@ const StudentLogin = {
                     window.location.hash = '#/waiting-room';
                 }
             } else {
-                errDiv.textContent = res.error;
+                errDiv.textContent = res.error || "Invalid Register Number or Password";
                 errDiv.style.display = 'block';
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Sign In';
+                }
             }
         });
 
@@ -1486,8 +1495,10 @@ const WaitingRoom = {
     afterRender(state) {
         const joinBtn = document.getElementById('btn-join-queue-active');
         if (joinBtn) {
-            joinBtn.addEventListener('click', () => {
-                store.joinQueue();
+            joinBtn.addEventListener('click', async () => {
+                joinBtn.disabled = true;
+                joinBtn.textContent = 'Joining Queue...';
+                await store.joinQueue();
                 window.location.hash = '#/queue';
             });
         }
@@ -1922,10 +1933,10 @@ const RoomSelection = {
         });
 
         document.querySelectorAll('.bed-option-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 const bedId = btn.getAttribute('data-bed-id');
                 const roomId = self.localState.selectedRoomId;
-                const res = store.lockBed(roomId, bedId);
+                const res = await store.lockBed(roomId, bedId);
                 if (res.success) {
                     window.appRender();
                 } else {
@@ -1951,22 +1962,24 @@ const RoomSelection = {
 
         const releaseBtn = document.querySelector('.btn-release-lock');
         if (releaseBtn) {
-            releaseBtn.addEventListener('click', () => {
-                store.releaseActiveLock();
+            releaseBtn.addEventListener('click', async () => {
+                await store.releaseActiveLock();
                 window.appRender();
             });
         }
 
         const confirmBtn = document.querySelector('.btn-confirm-booking');
         if (confirmBtn) {
-            confirmBtn.addEventListener('click', () => {
+            confirmBtn.addEventListener('click', async () => {
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = 'Confirming...';
                 const roomId = self.localState.selectedRoomId;
                 const bedId = state.activeLock.bedId;
                 let friends = [];
                 if (self.localState.groupBookingActive) {
                     friends = self.localState.friendRegs.filter(r => r !== "");
                 }
-                const res = store.confirmBooking(roomId, bedId, friends);
+                const res = await store.confirmBooking(roomId, bedId, friends);
                 if (res.success) {
                     self.localState.selectedRoomId = null;
                     self.localState.groupBookingActive = false;
@@ -1974,6 +1987,8 @@ const RoomSelection = {
                     window.location.hash = '#/confirmation';
                 } else {
                     alert(res.error || "Booking failed.");
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = 'Confirm & Complete Booking';
                 }
             });
         }
@@ -2519,20 +2534,20 @@ const AdminDashboard = {
         });
 
         document.querySelectorAll('.btn-set-window').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                store.setBookingWindowStatus(e.target.getAttribute('data-status'));
+            btn.addEventListener('click', async (e) => {
+                await store.setBookingWindowStatus(e.target.getAttribute('data-status'));
             });
         });
 
         document.querySelectorAll('.btn-set-speed').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                store.setSimulationSpeed(e.target.getAttribute('data-speed'));
+            btn.addEventListener('click', async (e) => {
+                await store.setSimulationSpeed(e.target.getAttribute('data-speed'));
             });
         });
 
-        document.querySelector('.btn-reset-system').addEventListener('click', () => {
+        document.querySelector('.btn-reset-system').addEventListener('click', async () => {
             if (confirm("Reset database? All records will be cleared.")) {
-                store.resetState();
+                await store.resetState();
                 window.location.reload();
             }
         });
