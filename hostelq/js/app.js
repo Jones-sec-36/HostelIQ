@@ -566,6 +566,9 @@ class Store {
 
     logout() {
         this.state.currentUser = null;
+        if (typeof currentRenderedRoute !== 'undefined') {
+            currentRenderedRoute = null;
+        }
         this.notify();
     }
 
@@ -1487,6 +1490,7 @@ const StudentLogin = {
 
             const res = await store.loginStudent(regNo, password);
             if (res.success) {
+                currentRenderedRoute = null; // Force router to render target view
                 const userObj = store.getCurrentUserObject();
                 if (userObj && userObj.bookedRoom) {
                     window.location.hash = '#/dashboard';
@@ -2725,7 +2729,8 @@ const AdminDashboard = {
                     const p = document.getElementById('admin-pass').value;
                     const res = await store.loginAdmin(u, p);
                     if (res.success) {
-                        window.appRender();
+                        currentRenderedRoute = null; // Force router to render full admin console
+                        routeView('/admin');
                     } else {
                         err.textContent = res.error;
                         err.style.display = 'block';
