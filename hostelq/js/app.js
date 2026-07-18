@@ -187,32 +187,6 @@ class Store {
             }
         }
     }
-            queue: {
-                isInQueue: false,
-                queueNumber: null,
-                studentsAhead: null,
-                totalAheadAtStart: null,
-                estimatedWaitSec: null,
-                isMyTurn: false,
-                sessionExpiresAt: null,
-                sessionTimeRemaining: null
-            },
-            activeLock: {
-                roomId: null,
-                bedId: null,
-                lockedAt: null,
-                expiresAt: null,
-                timeRemaining: null
-            },
-            bookings: [],
-            notifications: [
-                { id: 1, title: "Welcome to HostelQ", desc: "The booking window starts in 15 seconds. Be ready to join the queue!", type: "info", timestamp: new Date().toLocaleTimeString() }
-            ],
-            simulationSpeed: 1,
-            simulatedBookingCount: 124
-        };
-        this.saveState();
-    }
 
     saveState() {
         localStorage.setItem('hostelq_state', JSON.stringify(this.state));
