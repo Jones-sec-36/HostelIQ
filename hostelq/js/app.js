@@ -138,7 +138,9 @@ class Store {
 
     loadState() {
         if (this.isDbMode) {
+            localStorage.removeItem('hostelq_state');
             this.initDbMode();
+            return;
         }
 
         const saved = localStorage.getItem('hostelq_state');
@@ -991,11 +993,14 @@ class Store {
     }
 
     async setBookingWindowStatus(status) {
+        this.state.bookingWindow.status = status;
+        let countdownRemaining = status === 'countdown' ? 15 : 0;
+        this.state.bookingWindow.countdownRemaining = countdownRemaining;
+
         if (this.isDbMode) {
             try {
-                let countdownRemaining = status === 'countdown' ? 15 : 0;
-                await this.db.from('system_settings').update({ value: status }).eq('key', 'booking_window_status');
-                await this.db.from('system_settings').update({ value: String(countdownRemaining) }).eq('key', 'booking_window_countdown_remaining');
+                await this.db.from('system_settings').upsert({ key: 'booking_window_status', value: status }, { onConflict: 'key' });
+                await this.db.from('system_settings').upsert({ key: 'booking_window_countdown_remaining', value: String(countdownRemaining) }, { onConflict: 'key' });
 
                 if (status === 'open') {
                     await this.addNotification("Window Opened", "The room booking window is now open! Please click Join Queue.", "success");
@@ -1009,12 +1014,9 @@ class Store {
                 console.error("Error setting window status in database:", err);
             }
         } else {
-            this.state.bookingWindow.status = status;
             if (status === 'open') {
-                this.state.bookingWindow.countdownRemaining = 0;
                 this.addNotification("Window Opened", "The room booking window is now open! Please click Join Queue.", "success");
             } else if (status === 'countdown') {
-                this.state.bookingWindow.countdownRemaining = 15;
                 this.addNotification("Window Countdown", "The booking window countdown is active.", "info");
             } else {
                 this.addNotification("Window Closed", "The booking window is closed by admin.", "danger");
