@@ -2435,6 +2435,30 @@ const AdminDashboard = {
             </tr>
         `).join('');
 
+        const roomInventoryRowsHTML = state.rooms.map(r => {
+            const total = r.beds.length;
+            const available = r.beds.filter(b => b.status === 'available').length;
+            const booked = r.beds.filter(b => b.status === 'booked').length;
+            
+            let statusBadge = `<span class="badge badge-success">ALL VACANT</span>`;
+            if (booked === total && total > 0) {
+                statusBadge = `<span class="badge badge-danger">FULLY BOOKED</span>`;
+            } else if (booked > 0) {
+                statusBadge = `<span class="badge badge-warning">${booked}/${total} BOOKED</span>`;
+            }
+
+            return `
+                <tr>
+                    <td style="font-weight:600; color:var(--text-primary);">${r.block} - Room ${r.roomNo}</td>
+                    <td>${r.type}</td>
+                    <td>${total} Beds</td>
+                    <td style="color:var(--color-success); font-weight:600;">${available} Vacant</td>
+                    <td style="color:var(--color-warning);">${booked} Booked</td>
+                    <td>${statusBadge}</td>
+                </tr>
+            `;
+        }).join('');
+
         const chartsHTML = blockStats.map(bs => `
             <div class="chart-bar-item">
                 <div class="chart-bar-labels">
@@ -2536,6 +2560,34 @@ const AdminDashboard = {
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Room & Bed Inventory Overview Panel -->
+                <div class="glass-card" style="padding:28px; margin-top:30px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:12px;">
+                        <div>
+                            <span class="filter-section-title">Hostel Room & Bed Inventory Overview</span>
+                            <p style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;">Real-time availability overview of all rooms and vacant beds for admin monitoring.</p>
+                        </div>
+                        <span class="badge badge-info">${state.rooms.length} Rooms Total</span>
+                    </div>
+                    <div class="table-container" style="max-height:300px; overflow-y:auto;">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Room & Block</th>
+                                    <th>Configuration</th>
+                                    <th>Total Capacity</th>
+                                    <th>Vacant Beds</th>
+                                    <th>Booked Beds</th>
+                                    <th>Availability Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${roomInventoryRowsHTML.length > 0 ? roomInventoryRowsHTML : '<tr><td colspan="6">No rooms found.</td></tr>'}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
