@@ -1106,6 +1106,71 @@ class Store {
         return { addedCount, skippedCount, errorCount };
     }
 
+    // Add new room and generate beds
+    async addRoom(data) {
+        const roomId = `${data.block}-${data.roomNo}`;
+        const newRoom = {
+            id: roomId,
+            block: data.block,
+            room_no: data.roomNo,
+            type: data.type,
+            price: data.price,
+            ac: data.ac
+        };
+
+        const bedInserts = [];
+        for (let i = 1; i <= data.bedCount; i++) {
+            bedInserts.push({
+                id: `${roomId}-B${i}`,
+                room_id: roomId,
+                bed_no: i,
+                status: 'available',
+                locked_by: null,
+                lock_expires: null,
+                booked_by_reg_no: null,
+                booked_by_name: null
+            });
+        }
+
+        if (this.isDbMode) {
+            try {
+                const { error: roomErr } = await this.db.from('rooms').upsert(newRoom, { onConflict: 'id' });
+                if (roomErr) throw roomErr;
+
+                const { error: bedsErr } = await this.db.from('beds').upsert(bedInserts, { onConflict: 'id' });
+                if (bedsErr) throw bedsErr;
+
+                await this.addNotification("Room Added", `Room ${data.roomNo} (${data.block}) with ${data.bedCount} beds created in Supabase.`, "success");
+                await this.syncWithDatabase();
+                return { success: true };
+            } catch (err) {
+                console.error("Error adding room to Supabase:", err);
+                return { success: false, error: err.message || "Failed to add room to database." };
+            }
+        } else {
+            const roomObj = {
+                id: roomId,
+                block: data.block,
+                roomNo: data.roomNo,
+                type: data.type,
+                price: data.price,
+                ac: data.ac,
+                beds: bedInserts.map(b => ({
+                    id: b.id,
+                    bedNo: b.bed_no,
+                    status: 'available',
+                    lockedBy: null,
+                    lockExpires: null,
+                    bookedBy: null
+                }))
+            };
+            this.state.rooms.push(roomObj);
+            this.addNotification("Room Added", `Room ${data.roomNo} (${data.block}) added.`, "success");
+            this.notify();
+            return { success: true };
+        }
+    }
+
     startBackgroundProcesses() {
         setInterval(async () => {
             if (this.state.simulationSpeed === 0) return;
@@ -2498,6 +2563,69 @@ const AdminDashboard = {
                         <div id="import-status-msg" style="margin-top:12px; font-size:0.85rem;"></div>
                     </div>
                 </div>
+
+                <!-- Manual Room & Bed Management Panel -->
+                <div class="glass-card" style="padding:28px; margin-top:30px;">
+                    <div style="border-bottom:1px solid var(--border-color); padding-bottom:14px; margin-bottom:20px;">
+                        <span class="filter-section-title">Manual Room & Bed Creation</span>
+                        <p style="font-size:0.82rem; color:var(--text-muted); margin-top:6px;">
+                            Add a new hostel room and specify its block, room configuration (AC/Non-AC), annual fee, and bed capacity.
+                        </p>
+                    </div>
+
+                    <form id="add-room-form">
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
+                            <div class="form-group">
+                                <label for="room-block" style="font-size:0.85rem; font-weight:600; color:var(--text-secondary);">Hostel Block</label>
+                                <select id="room-block" class="input-glass" style="margin-top:6px;" required>
+                                    <option value="Block A">Block A</option>
+                                    <option value="Block B">Block B</option>
+                                    <option value="Block C">Block C</option>
+                                    <option value="Block D">Block D</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="room-no" style="font-size:0.85rem; font-weight:600; color:var(--text-secondary);">Room Number</label>
+                                <input type="text" id="room-no" class="input-glass" style="margin-top:6px;" placeholder="e.g. 106, 207" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="room-type" style="font-size:0.85rem; font-weight:600; color:var(--text-secondary);">Room Configuration</label>
+                                <select id="room-type" class="input-glass" style="margin-top:6px;" required>
+                                    <option value="4-in-1 AC">4-in-1 AC Suite</option>
+                                    <option value="8-in-1 AC">8-in-1 AC Shared</option>
+                                    <option value="10-in-1 AC">10-in-1 AC Dorm</option>
+                                    <option value="Non AC">Non AC Standard</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="room-price" style="font-size:0.85rem; font-weight:600; color:var(--text-secondary);">Annual Fee</label>
+                                <input type="text" id="room-price" class="input-glass" style="margin-top:6px;" placeholder="e.g. $1,800 / yr" value="$1,800 / yr" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="room-beds" style="font-size:0.85rem; font-weight:600; color:var(--text-secondary);">Number of Beds</label>
+                                <input type="number" id="room-beds" class="input-glass" style="margin-top:6px;" min="1" max="20" value="4" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="room-ac" style="font-size:0.85rem; font-weight:600; color:var(--text-secondary);">Air Conditioning</label>
+                                <select id="room-ac" class="input-glass" style="margin-top:6px;">
+                                    <option value="true">AC Room (Yes)</option>
+                                    <option value="false">Non AC Room (No)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="add-room-msg" style="margin-top:16px; font-size:0.85rem; display:none;"></div>
+
+                        <div style="margin-top:20px; text-align:right;">
+                            <button type="submit" class="btn btn-primary" id="btn-add-room">+ Create Room & Beds</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         `;
     },
@@ -2776,6 +2904,41 @@ const AdminDashboard = {
                 dropZone.style.background = '';
                 const file = e.dataTransfer.files[0];
                 if (file) handleImportFile(file);
+            });
+        }
+
+        // Add Room Handler
+        const addRoomForm = document.getElementById('add-room-form');
+        if (addRoomForm) {
+            addRoomForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const msgDiv = document.getElementById('add-room-msg');
+                const submitBtn = document.getElementById('btn-add-room');
+                msgDiv.style.display = 'none';
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Creating...';
+
+                const block = document.getElementById('room-block').value;
+                const roomNo = document.getElementById('room-no').value.trim();
+                const type = document.getElementById('room-type').value;
+                const price = document.getElementById('room-price').value.trim();
+                const bedCount = Number(document.getElementById('room-beds').value);
+                const ac = document.getElementById('room-ac').value === 'true';
+
+                const res = await store.addRoom({ block, roomNo, type, price, bedCount, ac });
+
+                if (res.success) {
+                    msgDiv.innerHTML = `<span style="color:var(--color-success);">✅ Room <strong>${roomNo} (${block})</strong> with ${bedCount} beds created successfully!</span>`;
+                    msgDiv.style.display = 'block';
+                    document.getElementById('room-no').value = '';
+                } else {
+                    msgDiv.innerHTML = `<span style="color:var(--color-danger);">❌ Error: ${res.error}</span>`;
+                    msgDiv.style.display = 'block';
+                }
+
+                submitBtn.disabled = false;
+                submitBtn.textContent = '+ Create Room & Beds';
             });
         }
     }
