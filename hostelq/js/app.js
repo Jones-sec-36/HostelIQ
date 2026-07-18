@@ -137,6 +137,41 @@ class Store {
     }
 
     loadState() {
+        this.state = {
+            students: [...INITIAL_STUDENTS],
+            admins: [...INITIAL_ADMINS],
+            rooms: generateInitialRooms(),
+            currentUser: null,
+            bookingWindow: {
+                status: 'closed',
+                countdownRemaining: 0,
+                totalCountdown: 15
+            },
+            queue: {
+                isInQueue: false,
+                queueNumber: null,
+                studentsAhead: 0,
+                totalAheadAtStart: 0,
+                estimatedWaitSec: 0,
+                isMyTurn: false,
+                sessionExpiresAt: null,
+                sessionTimeRemaining: null
+            },
+            activeLock: {
+                roomId: null,
+                bedId: null,
+                lockedAt: null,
+                expiresAt: null,
+                timeRemaining: null
+            },
+            bookings: [],
+            notifications: [
+                { id: 1, title: "Welcome to HostelQ", desc: "Hostel room booking system active.", type: "info", timestamp: new Date().toLocaleTimeString() }
+            ],
+            simulationSpeed: 1,
+            simulatedBookingCount: 0
+        };
+
         if (this.isDbMode) {
             localStorage.removeItem('hostelq_state');
             this.initDbMode();
@@ -147,22 +182,11 @@ class Store {
         if (saved) {
             try {
                 this.state = JSON.parse(saved);
-                return;
             } catch (e) {
                 console.error("Failed to load state, resetting.", e);
             }
         }
-
-        this.state = {
-            students: [...INITIAL_STUDENTS],
-            admins: [...INITIAL_ADMINS],
-            rooms: generateInitialRooms(),
-            currentUser: null,
-            bookingWindow: {
-                status: 'countdown', // closed, countdown, open
-                countdownRemaining: 15,
-                totalCountdown: 15
-            },
+    }
             queue: {
                 isInQueue: false,
                 queueNumber: null,
