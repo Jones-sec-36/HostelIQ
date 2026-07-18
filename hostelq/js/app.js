@@ -1174,6 +1174,37 @@ class Store {
         }
     }
 
+    // Change Admin Password
+    async changeAdminPassword(newPassword) {
+        const user = this.getCurrentUserObject();
+        if (!user || !user.isAdmin) return { success: false, error: "Not authenticated as admin." };
+
+        if (this.isDbMode) {
+            try {
+                const { error } = await this.db.from('admins')
+                    .update({ password: newPassword })
+                    .eq('username', user.username);
+
+                if (error) throw error;
+
+                await this.addNotification("Security Updated", "Admin password updated successfully in Supabase.", "success");
+                await this.syncWithDatabase();
+                return { success: true };
+            } catch (err) {
+                console.error("Error updating admin password in database:", err);
+                return { success: false, error: err.message || "Failed to update password in database." };
+            }
+        } else {
+            const admin = this.state.admins.find(a => a.username === user.username);
+            if (admin) {
+                admin.password = newPassword;
+            }
+            this.addNotification("Security Updated", "Admin password updated successfully.", "success");
+            this.notify();
+            return { success: true };
+        }
+    }
+
     startBackgroundProcesses() {
         setInterval(async () => {
             if (this.state.simulationSpeed === 0) return;
@@ -2707,6 +2738,36 @@ const AdminDashboard = {
                         </div>
                     </form>
                 </div>
+
+                <!-- Change Admin Password Panel -->
+                <div class="glass-card" style="padding:28px; margin-top:30px;">
+                    <div style="border-bottom:1px solid var(--border-color); padding-bottom:14px; margin-bottom:20px;">
+                        <span class="filter-section-title">Change Admin Security Password</span>
+                        <p style="font-size:0.82rem; color:var(--text-muted); margin-top:6px;">
+                            Update your admin login password stored securely in your database.
+                        </p>
+                    </div>
+
+                    <form id="change-pass-form">
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                            <div class="form-group">
+                                <label for="new-admin-pass" style="font-size:0.85rem; font-weight:600; color:var(--text-secondary);">New Password</label>
+                                <input type="password" id="new-admin-pass" class="input-glass" style="margin-top:6px;" placeholder="••••••••" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="confirm-admin-pass" style="font-size:0.85rem; font-weight:600; color:var(--text-secondary);">Confirm New Password</label>
+                                <input type="password" id="confirm-admin-pass" class="input-glass" style="margin-top:6px;" placeholder="••••••••" required>
+                            </div>
+                        </div>
+
+                        <div id="change-pass-msg" style="margin-top:16px; font-size:0.85rem; display:none;"></div>
+
+                        <div style="margin-top:20px; text-align:right;">
+                            <button type="submit" class="btn btn-warning" id="btn-change-pass">🔒 Update Admin Password</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         `;
     },
@@ -3021,6 +3082,49 @@ const AdminDashboard = {
 
                 submitBtn.disabled = false;
                 submitBtn.textContent = '+ Create Room & Beds';
+            });
+        }
+
+        // Change Admin Password Handler
+        const changePassForm = document.getElementById('change-pass-form');
+        if (changePassForm) {
+            changePassForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const msgDiv = document.getElementById('change-pass-msg');
+                const submitBtn = document.getElementById('btn-change-pass');
+                const newPass = document.getElementById('new-admin-pass').value;
+                const confirmPass = document.getElementById('confirm-admin-pass').value;
+
+                msgDiv.style.display = 'none';
+
+                if (newPass !== confirmPass) {
+                    msgDiv.innerHTML = `<span style="color:var(--color-danger);">❌ Passwords do not match!</span>`;
+                    msgDiv.style.display = 'block';
+                    return;
+                }
+
+                if (newPass.length < 4) {
+                    msgDiv.innerHTML = `<span style="color:var(--color-danger);">❌ Password must be at least 4 characters long.</span>`;
+                    msgDiv.style.display = 'block';
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Updating...';
+
+                const res = await store.changeAdminPassword(newPass);
+                if (res.success) {
+                    msgDiv.innerHTML = `<span style="color:var(--color-success);">✅ Password updated successfully in database!</span>`;
+                    msgDiv.style.display = 'block';
+                    document.getElementById('new-admin-pass').value = '';
+                    document.getElementById('confirm-admin-pass').value = '';
+                } else {
+                    msgDiv.innerHTML = `<span style="color:var(--color-danger);">❌ Error: ${res.error}</span>`;
+                    msgDiv.style.display = 'block';
+                }
+
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🔒 Update Admin Password';
             });
         }
     }
