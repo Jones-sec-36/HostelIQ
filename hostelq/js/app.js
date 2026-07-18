@@ -1490,7 +1490,9 @@ const StudentLogin = {
                 const userObj = store.getCurrentUserObject();
                 if (userObj && userObj.bookedRoom) {
                     window.location.hash = '#/dashboard';
-                } else if (store.state.bookingWindow.status === 'open') {
+                } else if (store.state.queue.isMyTurn) {
+                    window.location.hash = '#/select-room';
+                } else if (store.state.queue.isInQueue) {
                     window.location.hash = '#/queue';
                 } else {
                     window.location.hash = '#/waiting-room';
@@ -2378,8 +2380,12 @@ const AdminDashboard = {
         }).join('');
 
         const allBookings = [];
+        const seenRegs = new Set();
+
+        // 1. From students table
         state.students.forEach(stud => {
-            if (stud.bookedRoom) {
+            if (stud.bookedRoom && stud.bookedRoom.roomNo) {
+                seenRegs.add(stud.regNo);
                 allBookings.push({
                     regNo: stud.regNo,
                     name: stud.name,
@@ -2387,10 +2393,29 @@ const AdminDashboard = {
                     roomNo: stud.bookedRoom.roomNo,
                     bedNo: stud.bookedRoom.bedNo,
                     type: stud.bookedRoom.type,
-                    receiptNo: stud.bookedRoom.receiptNo,
-                    timestamp: stud.bookedRoom.timestamp
+                    receiptNo: stud.bookedRoom.receiptNo || 'HQ-CONFIRMED',
+                    timestamp: stud.bookedRoom.timestamp || 'Allocated'
                 });
             }
+        });
+
+        // 2. From beds table (ensures instant visibility even during background sync)
+        state.rooms.forEach(room => {
+            room.beds.forEach(bed => {
+                if (bed.status === 'booked' && bed.bookedBy && !seenRegs.has(bed.bookedBy.regNo)) {
+                    seenRegs.add(bed.bookedBy.regNo);
+                    allBookings.push({
+                        regNo: bed.bookedBy.regNo,
+                        name: bed.bookedBy.name || 'Student',
+                        block: room.block,
+                        roomNo: room.roomNo,
+                        bedNo: bed.bedNo,
+                        type: room.type,
+                        receiptNo: 'HQ-' + Math.floor(100000 + Math.random() * 900000),
+                        timestamp: 'Allocated'
+                    });
+                }
+            });
         });
 
         const filteredReportBookings = allBookings.filter(b => {
@@ -3020,9 +3045,15 @@ function routeView(route) {
     const currentUser = store.state.currentUser;
     const isLoggedStudent = currentUser && currentUser.type === 'student';
 
-    if (route === '/queue' && (!isLoggedStudent || store.state.queue.isMyTurn)) {
-        window.location.hash = '#/';
-        return;
+    if (route === '/queue') {
+        if (!isLoggedStudent) {
+            window.location.hash = '#/login';
+            return;
+        }
+        if (store.state.queue.isMyTurn) {
+            window.location.hash = '#/select-room';
+            return;
+        }
     }
     if (route === '/select-room' && (!isLoggedStudent || !store.state.queue.isMyTurn)) {
         window.location.hash = '#/';
