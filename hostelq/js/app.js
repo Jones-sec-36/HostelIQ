@@ -590,19 +590,23 @@ class Store {
         
         if (this.isDbMode) {
             try {
+                const { count } = await this.db.from('queue').select('*', { count: 'exact', head: true });
+                const ahead = count || 0;
+                const isFirst = (ahead === 0);
+                
                 const queueEntry = {
                     reg_no: user.regNo,
                     queue_number: queueNum,
                     students_ahead: ahead,
-                    estimated_wait_sec: ahead * 8,
-                    is_my_turn: false,
-                    session_expires_at: null
+                    estimated_wait_sec: isFirst ? 0 : ahead * 5,
+                    is_my_turn: isFirst,
+                    session_expires_at: isFirst ? Date.now() + 5 * 60 * 1000 : null
                 };
                 
-                await this.db.from('queue').insert(queueEntry);
+                await this.db.from('queue').upsert(queueEntry, { onConflict: 'reg_no' });
                 await this.db.from('system_settings').update({ value: String(queueNum) }).eq('key', 'simulated_booking_count');
 
-                await this.addNotification("Queue Joined", `Your queue number is #${queueNum}. Est. wait time: ${Math.ceil((ahead * 8) / 60)} mins.`, "info");
+                await this.addNotification("Queue Joined", isFirst ? "It's your turn! Proceed to select your room." : `Your queue number is #${queueNum}. Est. wait time: ${Math.ceil((ahead * 5) / 60)} mins.`, "info");
                 await this.syncWithDatabase();
             } catch (err) {
                 console.error("Failed to join queue in Supabase:", err);
