@@ -1324,8 +1324,15 @@ class Store {
                         this.releaseActiveLock();
                         this.state.queue = { isInQueue: false, queueNumber: null, studentsAhead: null, totalAheadAtStart: null, estimatedWaitSec: null, isMyTurn: false, sessionExpiresAt: null, sessionTimeRemaining: null };
                         this.addNotification("Session Expired", "Your 5-minute booking window has expired. You have been removed from the queue.", "danger");
+                        stateChanged = true;
+                    } else {
+                        const timerEl = document.getElementById('session-timer-digits');
+                        if (timerEl) {
+                            const sMin = Math.floor(diff / 60);
+                            const sSec = diff % 60;
+                            timerEl.textContent = `${String(sMin).padStart(2, '0')}:${String(sSec).padStart(2, '0')}`;
+                        }
                     }
-                    stateChanged = true;
                 }
 
                 if (this.state.activeLock.roomId && this.state.activeLock.expiresAt) {
@@ -1334,8 +1341,15 @@ class Store {
                     if (diff <= 0) {
                         this.releaseActiveLock();
                         this.addNotification("Room Lock Released", "Your 3-minute temporary room lock has expired.", "danger");
+                        stateChanged = true;
+                    } else {
+                        const lockTimerEl = document.getElementById('drawer-lock-timer');
+                        if (lockTimerEl) {
+                            const lMin = Math.floor(diff / 60);
+                            const lSec = diff % 60;
+                            lockTimerEl.textContent = `${String(lMin).padStart(2, '0')}:${String(lSec).padStart(2, '0')}`;
+                        }
                     }
-                    stateChanged = true;
                 }
 
                 this.state.rooms.forEach(room => {
@@ -1707,7 +1721,8 @@ const RoomSelection = {
             "8-in-1 AC": true,
             "10-in-1 AC": true,
             "Non AC": true
-        }
+        },
+        bookingInProgress: false
     },
 
     render(state) {
@@ -1855,9 +1870,13 @@ const RoomSelection = {
                     lockTimerHTML = `
                         <div class="lock-timer-section">
                             <span>Bed Lock Expires In:</span>
-                            <span class="lock-time-val">${lockTimeStr}</span>
+                            <span class="lock-time-val" id="drawer-lock-timer">${lockTimeStr}</span>
                         </div>
                     `;
+
+                    const isBooking = this.localState.bookingInProgress;
+                    const confirmBtnText = isBooking ? 'Confirming...' : 'Confirm & Book';
+                    const confirmBtnDisabled = isBooking ? 'disabled' : '';
 
                     let groupFormHTML = '';
                     if (this.localState.groupBookingActive) {
@@ -1867,7 +1886,7 @@ const RoomSelection = {
                             inputsHTML += `
                                 <div class="form-group" style="margin-bottom:10px;">
                                     <label style="font-size:0.75rem;">Friend ${i + 1} Register Number</label>
-                                    <input type="text" class="input-glass friend-reg-input" data-index="${i}" value="${this.localState.friendRegs[i]}" placeholder="e.g. STU002" style="padding: 8px 12px; font-size: 0.85rem;">
+                                    <input type="text" class="input-glass friend-reg-input" data-index="${i}" value="${this.localState.friendRegs[i]}" placeholder="e.g. STU002" ${isBooking ? 'disabled' : ''} style="padding: 8px 12px; font-size: 0.85rem;">
                                 </div>
                             `;
                         }
@@ -1883,12 +1902,12 @@ const RoomSelection = {
                         <div class="group-booking-box">
                             <div class="group-toggle-wrap">
                                 <span style="font-size:0.9rem; font-weight:600;">Group booking with friends</span>
-                                <input type="checkbox" id="group-booking-toggle" ${this.localState.groupBookingActive ? 'checked' : ''} style="width:16px; height:16px;">
+                                <input type="checkbox" id="group-booking-toggle" ${this.localState.groupBookingActive ? 'checked' : ''} ${isBooking ? 'disabled' : ''} style="width:16px; height:16px;">
                             </div>
                             ${groupFormHTML}
                             <div style="display:flex; gap:12px; margin-top:10px;">
-                                <button class="btn btn-secondary btn-release-lock" style="flex:1;">Cancel Lock</button>
-                                <button class="btn btn-success btn-confirm-booking" style="flex:2;">Confirm & Book</button>
+                                <button class="btn btn-secondary btn-release-lock" ${isBooking ? 'disabled' : ''} style="flex:1;">Cancel Lock</button>
+                                <button class="btn btn-success btn-confirm-booking" ${confirmBtnDisabled} style="flex:2;">${confirmBtnText}</button>
                             </div>
                         </div>
                     `;
@@ -1979,6 +1998,7 @@ const RoomSelection = {
     afterRender(state) {
         const self = this;
         const closeDrawer = () => {
+            if (self.localState.bookingInProgress) return;
             self.localState.selectedRoomId = null;
             self.localState.groupBookingActive = false;
             self.localState.friendRegs = ["", "", ""];
@@ -1999,6 +2019,7 @@ const RoomSelection = {
 
         document.querySelectorAll('.room-card').forEach(card => {
             card.addEventListener('click', () => {
+                if (self.localState.bookingInProgress) return;
                 self.localState.selectedRoomId = card.getAttribute('data-room-id');
                 window.appRender();
             });
@@ -2007,6 +2028,7 @@ const RoomSelection = {
         const quickSelectBtn = document.querySelector('.btn-quick-select');
         if (quickSelectBtn) {
             quickSelectBtn.addEventListener('click', () => {
+                if (self.localState.bookingInProgress) return;
                 self.localState.selectedRoomId = quickSelectBtn.getAttribute('data-room-id');
                 window.appRender();
             });
@@ -2014,6 +2036,7 @@ const RoomSelection = {
 
         document.querySelectorAll('.block-tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
+                if (self.localState.bookingInProgress) return;
                 self.localState.selectedBlock = e.target.getAttribute('data-block');
                 window.appRender();
             });
@@ -2022,18 +2045,15 @@ const RoomSelection = {
         const searchInput = document.getElementById('room-search-input');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
+                if (self.localState.bookingInProgress) return;
                 self.localState.searchQuery = e.target.value;
                 window.appRender();
-                const inp = document.getElementById('room-search-input');
-                if (inp) {
-                    inp.focus();
-                    inp.setSelectionRange(inp.value.length, inp.value.length);
-                }
             });
         }
 
         document.querySelectorAll('.type-filter-checkbox').forEach(cb => {
             cb.addEventListener('change', (e) => {
+                if (self.localState.bookingInProgress) return;
                 const type = e.target.getAttribute('data-type');
                 self.localState.selectedTypes[type] = e.target.checked;
                 window.appRender();
@@ -2042,6 +2062,7 @@ const RoomSelection = {
 
         document.querySelectorAll('.bed-option-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
+                if (self.localState.bookingInProgress) return;
                 const bedId = btn.getAttribute('data-bed-id');
                 const roomId = self.localState.selectedRoomId;
                 const res = await store.lockBed(roomId, bedId);
@@ -2056,6 +2077,7 @@ const RoomSelection = {
         const groupToggle = document.getElementById('group-booking-toggle');
         if (groupToggle) {
             groupToggle.addEventListener('change', (e) => {
+                if (self.localState.bookingInProgress) return;
                 self.localState.groupBookingActive = e.target.checked;
                 window.appRender();
             });
@@ -2063,6 +2085,7 @@ const RoomSelection = {
 
         document.querySelectorAll('.friend-reg-input').forEach(inp => {
             inp.addEventListener('input', (e) => {
+                if (self.localState.bookingInProgress) return;
                 const idx = Number(e.target.getAttribute('data-index'));
                 self.localState.friendRegs[idx] = e.target.value.trim();
             });
@@ -2071,6 +2094,7 @@ const RoomSelection = {
         const releaseBtn = document.querySelector('.btn-release-lock');
         if (releaseBtn) {
             releaseBtn.addEventListener('click', async () => {
+                if (self.localState.bookingInProgress) return;
                 await store.releaseActiveLock();
                 window.appRender();
             });
@@ -2079,15 +2103,21 @@ const RoomSelection = {
         const confirmBtn = document.querySelector('.btn-confirm-booking');
         if (confirmBtn) {
             confirmBtn.addEventListener('click', async () => {
-                confirmBtn.disabled = true;
-                confirmBtn.textContent = 'Confirming...';
+                if (self.localState.bookingInProgress) return;
                 const roomId = self.localState.selectedRoomId;
                 const bedId = state.activeLock.bedId;
                 let friends = [];
                 if (self.localState.groupBookingActive) {
                     friends = self.localState.friendRegs.filter(r => r !== "");
                 }
+
+                self.localState.bookingInProgress = true;
+                window.appRender();
+
                 const res = await store.confirmBooking(roomId, bedId, friends);
+                
+                self.localState.bookingInProgress = false;
+
                 if (res.success) {
                     self.localState.selectedRoomId = null;
                     self.localState.groupBookingActive = false;
@@ -2095,8 +2125,7 @@ const RoomSelection = {
                     window.location.hash = '#/confirmation';
                 } else {
                     alert(res.error || "Booking failed.");
-                    confirmBtn.disabled = false;
-                    confirmBtn.textContent = 'Confirm & Complete Booking';
+                    window.appRender();
                 }
             });
         }
@@ -3279,8 +3308,44 @@ function routeView(route) {
         }
     });
 
+    // Focus preservation
+    let activeElementSelector = null;
+    let selectionStart = null;
+    let selectionEnd = null;
+
+    const activeEl = document.activeElement;
+    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+        if (activeEl.id) {
+            activeElementSelector = `#${activeEl.id}`;
+        } else if (activeEl.className) {
+            if (activeEl.classList.contains('friend-reg-input')) {
+                const idx = activeEl.getAttribute('data-index');
+                activeElementSelector = `.friend-reg-input[data-index="${idx}"]`;
+            } else {
+                const classes = Array.from(activeEl.classList).join('.');
+                activeElementSelector = `${activeEl.tagName.toLowerCase()}.${classes}`;
+            }
+        }
+        selectionStart = activeEl.selectionStart;
+        selectionEnd = activeEl.selectionEnd;
+    }
+
     root.innerHTML = view.render(store.state);
     view.afterRender(store.state);
+
+    if (activeElementSelector) {
+        const restoredEl = document.querySelector(activeElementSelector);
+        if (restoredEl) {
+            restoredEl.focus();
+            if (selectionStart !== null && selectionEnd !== null) {
+                try {
+                    restoredEl.setSelectionRange(selectionStart, selectionEnd);
+                } catch (e) {
+                    // Ignore for input types that don't support selection range
+                }
+            }
+        }
+    }
 }
 
 function setupMobileMenu() {
