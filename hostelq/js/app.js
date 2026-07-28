@@ -102,7 +102,7 @@ function generateInitialRooms() {
 class Store {
     constructor() {
         this.listeners = [];
-        
+
         // Robust fallback initialization of Supabase client in case of loading race conditions
         if (!window.supabaseClient && window.supabase) {
             try {
@@ -194,7 +194,7 @@ class Store {
 
     async initDbMode() {
         if (!this.db) return;
-        
+
         console.log("Supabase Mode Active: Checking and bootstrapping data...");
         try {
             const { data: rooms, error } = await this.db.from('rooms').select('id').limit(1);
@@ -454,7 +454,7 @@ class Store {
                 await this.db.from('queue').delete().neq('reg_no', '');
                 await this.db.from('bookings').delete().neq('id', '');
                 await this.db.from('notifications').delete().neq('id', '');
-                
+
                 await this.db.from('beds')
                     .update({
                         status: 'available',
@@ -505,7 +505,7 @@ class Store {
 
                 this.state.currentUser = { type: 'student', regNo: data.reg_no };
                 await this.addNotification("Login Successful", `Welcome back, ${data.name}!`, "success");
-                
+
                 if (data.booked_room) {
                     await this.db.from('queue').delete().eq('reg_no', data.reg_no);
                 }
@@ -590,13 +590,13 @@ class Store {
 
         const queueNum = this.state.simulatedBookingCount + 1;
         const ahead = Math.floor(10 + Math.random() * 10);
-        
+
         if (this.isDbMode) {
             try {
                 const { count } = await this.db.from('queue').select('*', { count: 'exact', head: true });
                 const ahead = count || 0;
                 const isFirst = (ahead === 0);
-                
+
                 const queueEntry = {
                     reg_no: user.regNo,
                     queue_number: queueNum,
@@ -605,7 +605,7 @@ class Store {
                     is_my_turn: isFirst,
                     session_expires_at: isFirst ? Date.now() + 5 * 60 * 1000 : null
                 };
-                
+
                 await this.db.from('queue').upsert(queueEntry, { onConflict: 'reg_no' });
                 await this.db.from('system_settings').update({ value: String(queueNum) }).eq('key', 'simulated_booking_count');
 
@@ -791,7 +791,7 @@ class Store {
                         if (friendIndex < groupRegNos.length && b.status === 'available' && b.id !== bedId) {
                             const friendReg = groupRegNos[friendIndex];
                             const { data: friend } = await this.db.from('students').select('*').eq('reg_no', friendReg.toUpperCase()).single();
-                            
+
                             await this.db.from('beds')
                                 .update({
                                     status: 'booked',
@@ -843,14 +843,16 @@ class Store {
                 await this.addNotification("Booking Confirmed", `Successfully booked Room ${room.room_no} (${room.block})!`, "success");
                 await this.syncWithDatabase();
 
-                return { success: true, booking: {
-                    id: mainBooking.id,
-                    roomNo: mainBooking.room_no,
-                    block: mainBooking.block,
-                    type: mainBooking.type,
-                    bedsBooked: mainBooking.beds_booked,
-                    timestamp: mainBooking.timestamp
-                }};
+                return {
+                    success: true, booking: {
+                        id: mainBooking.id,
+                        roomNo: mainBooking.room_no,
+                        block: mainBooking.block,
+                        type: mainBooking.type,
+                        bedsBooked: mainBooking.beds_booked,
+                        timestamp: mainBooking.timestamp
+                    }
+                };
 
             } catch (err) {
                 console.error("Database confirm booking error:", err);
@@ -912,7 +914,7 @@ class Store {
                 if (friendIndex < groupRegNos.length && b.status === 'available') {
                     const friendReg = groupRegNos[friendIndex];
                     const friend = this.state.students.find(s => s.regNo.toUpperCase() === friendReg.toUpperCase());
-                    
+
                     b.status = 'booked';
                     b.bookedBy = { regNo: friend.regNo, name: friend.name };
                     bookedBeds.push({ bedNo: b.bedNo, regNo: friend.regNo, name: friend.name });
@@ -1218,7 +1220,7 @@ class Store {
                     if (user && user.isAdmin && this.state.bookingWindow.status === 'countdown') {
                         const newCountdown = Math.max(0, this.state.bookingWindow.countdownRemaining - 1);
                         await this.db.from('system_settings').update({ value: String(newCountdown) }).eq('key', 'booking_window_countdown_remaining');
-                        
+
                         if (newCountdown <= 0) {
                             await this.db.from('system_settings').update({ value: 'open' }).eq('key', 'booking_window_status');
                             await this.addNotification("Booking Window Open", "Official hostel room bookings have commenced! Click 'Join Queue' now.", "success");
@@ -1306,7 +1308,7 @@ class Store {
                         this.state.queue.isMyTurn = true;
                         this.state.queue.studentsAhead = 0;
                         this.state.queue.estimatedWaitSec = 0;
-                        
+
                         const expires = Date.now() + 5 * 60 * 1000;
                         this.state.queue.sessionExpiresAt = expires;
                         this.state.queue.sessionTimeRemaining = 300;
@@ -1457,7 +1459,7 @@ const LandingPage = {
             </div>
         `;
     },
-    afterRender(state) {}
+    afterRender(state) { }
 };
 
 const StudentLogin = {
@@ -1690,7 +1692,7 @@ const VirtualQueue = {
             </div>
         `;
     },
-    afterRender(state) {}
+    afterRender(state) { }
 };
 
 const RoomSelection = {
@@ -1732,7 +1734,7 @@ const RoomSelection = {
             const rec = user.recommendedRoom;
             const targetRoom = state.rooms.find(r => r.block === rec.block && r.roomNo === rec.roomNo);
             const availCount = targetRoom ? targetRoom.beds.filter(b => b.status === 'available').length : 0;
-            
+
             if (availCount > 0) {
                 recommendationHTML = `
                     <div class="recommendation-banner">
@@ -2263,11 +2265,11 @@ const StudentDashboard = {
         let roommatesHTML = '';
         const roomObj = state.rooms.find(r => r.block === room.block && r.roomNo === room.roomNo);
         const otherBeds = roomObj ? roomObj.beds.filter(b => b.status === 'booked' && b.bookedBy.regNo !== user.regNo) : [];
-        
+
         if (otherBeds.length > 0) {
             roommatesHTML = otherBeds.map(b => `
                 <div class="roommate-card glass-card">
-                    <div class="roommate-avatar">${b.bookedBy.name.split(' ').map(n=>n[0]).join('') || 'ST'}</div>
+                    <div class="roommate-avatar">${b.bookedBy.name.split(' ').map(n => n[0]).join('') || 'ST'}</div>
                     <div class="roommate-name">${b.bookedBy.name || 'Student'}</div>
                     <div class="roommate-reg">${b.bookedBy.regNo} (Bed #${b.bedNo})</div>
                     <span class="badge badge-success" style="font-size:0.65rem;">Roommate</span>
@@ -2331,7 +2333,7 @@ const StudentDashboard = {
             </div>
         `;
     },
-    afterRender(state) {}
+    afterRender(state) { }
 };
 
 const AdminDashboard = {
@@ -2341,7 +2343,7 @@ const AdminDashboard = {
 
     render(state) {
         const user = store.getCurrentUserObject();
-        
+
         if (!user || !user.isAdmin) {
             return `
                 <div class="auth-container">
@@ -2371,7 +2373,7 @@ const AdminDashboard = {
         let totalBeds = 0;
         let occupiedBeds = 0;
         let reservedBeds = 0;
-        
+
         state.rooms.forEach(r => {
             totalBeds += r.beds.length;
             r.beds.forEach(b => {
@@ -2474,7 +2476,7 @@ const AdminDashboard = {
             const total = r.beds.length;
             const available = r.beds.filter(b => b.status === 'available').length;
             const booked = r.beds.filter(b => b.status === 'booked').length;
-            
+
             let statusBadge = `<span class="badge badge-success">ALL VACANT</span>`;
             if (booked === total && total > 0) {
                 statusBadge = `<span class="badge badge-danger">FULLY BOOKED</span>`;
@@ -3153,16 +3155,19 @@ const ICONS = {
     success: `<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
     warning: `<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`,
     danger: `<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
-    info: `<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`
+    info: `<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+    bell: `<svg class="stroke-svg" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>`,
+    bellOff: `<svg class="stroke-svg" viewBox="0 0 24 24"><path d="M13.73 21a2 2 0 01-3.46 0M18.63 13A17.89 17.89 0 0118 8M6.26 6.26A5.86 5.86 0 006 8c0 7-3 9-3 9h14M18 8a6 6 0 00-9.33-5M1 1l22 22"/></svg>`
 };
 
 let lastSeenToastId = null;
 
 function initApp() {
     setupTheme();
+    setupNotifications();
     setupRouting();
     setupMobileMenu();
-    
+
     store.subscribe((state) => {
         handleStateUpdate(state);
     });
@@ -3174,7 +3179,7 @@ function setupTheme() {
     const toggleBtn = document.getElementById('theme-toggle-btn');
     const htmlEl = document.documentElement;
     const currentTheme = localStorage.getItem('theme') || 'dark';
-    
+
     htmlEl.setAttribute('data-theme', currentTheme);
     toggleBtn.innerHTML = currentTheme === 'dark' ? ICONS.sun : ICONS.moon;
 
@@ -3183,6 +3188,26 @@ function setupTheme() {
         htmlEl.setAttribute('data-theme', theme);
         localStorage.setItem('theme', theme);
         toggleBtn.innerHTML = theme === 'dark' ? ICONS.sun : ICONS.moon;
+    });
+}
+
+function setupNotifications() {
+    const toggleBtn = document.getElementById('notification-toggle-btn');
+    if (!toggleBtn) return;
+
+    const updateButton = () => {
+        const isEnabled = localStorage.getItem('notificationsEnabled') !== 'false';
+        toggleBtn.innerHTML = isEnabled ? ICONS.bell : ICONS.bellOff;
+        toggleBtn.title = isEnabled ? 'Mute Pop-up Notifications' : 'Unmute Pop-up Notifications';
+        toggleBtn.setAttribute('aria-label', isEnabled ? 'Mute Pop-up Notifications' : 'Unmute Pop-up Notifications');
+    };
+
+    updateButton();
+
+    toggleBtn.addEventListener('click', () => {
+        const isEnabled = localStorage.getItem('notificationsEnabled') !== 'false';
+        localStorage.setItem('notificationsEnabled', isEnabled ? 'false' : 'true');
+        updateButton();
     });
 }
 
@@ -3231,9 +3256,9 @@ function routeView(route) {
 
     // Prevent re-rendering static/input forms if already showing to avoid resetting input fields & losing focus
     const isStaticRoute = (
-        route === '/' || 
-        route === '/login' || 
-        route === '/confirmation' || 
+        route === '/' ||
+        route === '/login' ||
+        route === '/confirmation' ||
         (route === '/admin' && (!currentUser || !currentUser.isAdmin))
     );
     if (isStaticRoute && currentRenderedRoute === route) {
@@ -3276,6 +3301,9 @@ function setupMobileMenu() {
 }
 
 function spawnToast(title, desc, type) {
+    const isEnabled = localStorage.getItem('notificationsEnabled') !== 'false';
+    if (!isEnabled) return;
+
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
@@ -3326,7 +3354,7 @@ function handleStateUpdate(state) {
                 </div>
             `;
         }
-        
+
         document.getElementById('btn-nav-logout').addEventListener('click', () => {
             store.logout();
             window.location.hash = '#/';

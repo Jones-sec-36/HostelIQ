@@ -334,6 +334,12 @@ nav#main-nav {
     fill: currentColor;
 }
 
+.btn-theme svg.stroke-svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2px;
+}
+
 .mobile-nav-toggle {
     display: none;
     background: transparent;
@@ -527,6 +533,7 @@ html[data-theme="light"] .input-glass {
 
 /* Toast System */
 .toast-container {
+    display: none !important;
     position: fixed;
     bottom: 24px;
     right: 24px;
