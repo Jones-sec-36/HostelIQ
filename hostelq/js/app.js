@@ -291,6 +291,16 @@ class Store {
     async syncWithDatabase() {
         if (!this.db) return;
 
+        const prevStateStr = JSON.stringify({
+            rooms: this.state.rooms,
+            bookingWindow: this.state.bookingWindow,
+            queue: this.state.queue,
+            activeLock: this.state.activeLock,
+            bookings: this.state.bookings,
+            notifications: this.state.notifications,
+            currentUser: this.state.currentUser
+        });
+
         try {
             const { data: studentsData } = await this.db.from('students').select('*');
             if (studentsData) {
@@ -437,7 +447,19 @@ class Store {
                 }
             }
 
-            this.notifyListenersOnly();
+            const newStateStr = JSON.stringify({
+                rooms: this.state.rooms,
+                bookingWindow: this.state.bookingWindow,
+                queue: this.state.queue,
+                activeLock: this.state.activeLock,
+                bookings: this.state.bookings,
+                notifications: this.state.notifications,
+                currentUser: this.state.currentUser
+            });
+
+            if (prevStateStr !== newStateStr) {
+                this.notifyListenersOnly();
+            }
         } catch (err) {
             console.error("Error in syncWithDatabase:", err);
         }
